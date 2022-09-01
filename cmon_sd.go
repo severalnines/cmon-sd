@@ -27,27 +27,16 @@ import (
 
 const namespace = "cmon"
 
+var cmonEndpoint string
+var cmonUsername string
+var cmonPassword string
+
 type ClusterTarget struct {
   Target []string          `json:"targets,omitempty"`
   Label  map[string]string `json:"labels,omitempty"`
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-  cmonEndpoint := os.Getenv("CMON_ENDPOINT")
-  cmonUsername := os.Getenv("CMON_USERNAME")
-  cmonPassword := os.Getenv("CMON_PASSWORD")
-
-  if cmonEndpoint == "" {
-    cmonEndpoint = "https://127.0.0.1:9501"
-  }
-
-  if cmonUsername == "" {
-    log.Fatalf("Env variable CMON_USERNAME is not set.")
-  }
-
-  if cmonPassword == "" {
-    log.Fatalf("Env variable CMON_PASSWORD is not set.")
-  }
 
   client := cmon.NewClient(&config.CmonInstance{
     Url:      cmonEndpoint,
@@ -72,10 +61,9 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
   }
 
   clusterTarget := []ClusterTarget{}
-  i := 0
 
   // iterate through all clusters
-  for _, cluster := range res.Clusters {
+  for i, cluster := range res.Clusters {
 
     temp := ClusterTarget{
       Target: []string{},
@@ -99,7 +87,8 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
       }
 
       //check host type and assign exporter port
-      temp.Target = append(temp.Target, host.IP+":9100") // node_exporter
+      temp.Target = append(temp.Target, host.IP+":9100") // node exporter
+      temp.Target = append(temp.Target, host.IP+":9011") // process exporter
 
       if host.Nodetype == "mysql" {
         temp.Target = append(temp.Target, host.IP+":9104") // mysql exporter
@@ -118,6 +107,21 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+  cmonEndpoint = os.Getenv("CMON_ENDPOINT")
+  cmonUsername = os.Getenv("CMON_USERNAME")
+  cmonPassword = os.Getenv("CMON_PASSWORD")
+
+  if cmonEndpoint == "" {
+    cmonEndpoint = "https://127.0.0.1:9501"
+  }
+
+  if cmonUsername == "" {
+    log.Fatalf("Env variable CMON_USERNAME is not set.")
+  }
+
+  if cmonPassword == "" {
+    log.Fatalf("Env variable CMON_PASSWORD is not set.")
+  }
 
   http.HandleFunc("/", IndexHandler)
   log.Fatal(http.ListenAndServe(":8080", nil))
