@@ -14,25 +14,22 @@
 package main
 
 import (
+	"encoding/json"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
+
 	"github.com/severalnines/cmon-proxy/cmon"
 	"github.com/severalnines/cmon-proxy/cmon/api"
 	"github.com/severalnines/cmon-proxy/config"
-	"log"
-	"os"
-  "encoding/json"
-  "strconv"
-  "net/http"
 )
 
 const namespace = "cmon"
 
 type ClusterTarget struct {
-  Target  []string            `json:"targets,omitempty"`
-  Label   map[string]string   `json:"labels,omitempty"`
-}
-
-func Dummy() error {
-	return nil
+	Target []string          `json:"targets,omitempty"`
+	Label  map[string]string `json:"labels,omitempty"`
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +52,8 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	client := cmon.NewClient(&config.CmonInstance{
 		Url:      cmonEndpoint,
 		Username: cmonUsername,
-		Password: cmonPassword},
+		Password: cmonPassword,
+	},
 		30)
 
 	err := client.Authenticate()
@@ -65,58 +63,60 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  res, err := client.GetAllClusterInfo(&api.GetAllClusterInfoRequest{
-    WithHosts: true})
+	res, err := client.GetAllClusterInfo(&api.GetAllClusterInfoRequest{WithHosts: true})
 
 	if err != nil {
 		log.Println("Test: ", err, res)
 	}
 
-  clusterTarget := []ClusterTarget{}
-  i := 0
+	clusterTarget := []ClusterTarget{}
+	i := 0
 
-  // iterate through all clusters
-  for _, cluster := range res.Clusters {
+	// iterate through all clusters
+	for _, cluster := range res.Clusters {
 
-    temp := ClusterTarget{
-      Target: []string{},
-      Label: map[string]string{
-        "ClusterID": strconv.FormatInt(int64(cluster.ClusterID), 10),
-        "ClusterName": cluster.ClusterName,
-        "cid": strconv.FormatInt(int64(cluster.ClusterID), 10),
-        "ClusterType": cluster.ClusterType,
-      },
-    }
+		temp := ClusterTarget{
+			Target: []string{},
+			Label: map[string]string{
+				"ClusterID":   strconv.FormatInt(int64(cluster.ClusterID), 10),
+				"ClusterName": cluster.ClusterName,
+				"cid":         strconv.FormatInt(int64(cluster.ClusterID), 10),
+				"ClusterType": cluster.ClusterType,
+			},
+		}
 
-    // iterate through all hosts for given cluster
-    for _, host := range cluster.Hosts {
-      if host.Nodetype == "controller" {
-        continue
-      }
-      if host.Nodetype == "prometheus" {
-        continue
-      }
+		// iterate through all hosts for given cluster
+		for _, host := range cluster.Hosts {
 
-      //check host type and assign exporter port
-      temp.Target = append(temp.Target, host.IP + ":9100") // node_exporter
+			if host.Nodetype == "controller" {
+				continue
+			}
 
-      if host.Nodetype == "mysql" {
-        temp.Target = append(temp.Target, host.IP + ":9104") // mysql exporter
-      }
-    }
+			if host.Nodetype == "prometheus" {
+				continue
+			}
 
-    clusterTarget = append(clusterTarget, temp)
-    i++
-  }
+			//check host type and assign exporter port
+			temp.Target = append(temp.Target, host.IP+":9100") // node_exporter
 
-  w.Header().Set("Content-Type", "application/json")
-  w.WriteHeader(http.StatusCreated)
-  json.NewEncoder(w).Encode(clusterTarget)
+			if host.Nodetype == "mysql" {
+				temp.Target = append(temp.Target, host.IP+":9104") // mysql exporter
+			}
+
+		}
+
+		clusterTarget = append(clusterTarget, temp)
+		i++
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(clusterTarget)
+
 }
 
 func main() {
 
-    http.HandleFunc("/", IndexHandler)
-    log.Fatal(http.ListenAndServe(":8080", nil))
-
+	http.HandleFunc("/", IndexHandler)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
