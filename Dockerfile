@@ -1,4 +1,6 @@
 FROM golang:1.19-alpine as builder
+ENV CGO_ENABLED=0
+ENV GOOS=linux
 
 WORKDIR /app
 
@@ -8,7 +10,7 @@ RUN go mod download
 
 COPY *.go ./
 
-RUN go build -o /cmon_sd
+RUN go build -ldflags "-s -w -extldflags -static" -o /cmon_sd
 
 
 # final image
