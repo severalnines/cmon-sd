@@ -14,15 +14,15 @@
 package main
 
 import (
-  "encoding/json"
-  "log"
-  "net/http"
-  "os"
-  "strconv"
+	"encoding/json"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
 
-  "github.com/severalnines/cmon-proxy/cmon"
-  "github.com/severalnines/cmon-proxy/cmon/api"
-  "github.com/severalnines/cmon-proxy/config"
+	"github.com/severalnines/cmon-proxy/cmon"
+	"github.com/severalnines/cmon-proxy/cmon/api"
+	"github.com/severalnines/cmon-proxy/config"
 )
 
 const namespace = "cmon"
@@ -32,97 +32,138 @@ var cmonUsername string
 var cmonPassword string
 
 type ClusterTarget struct {
-  Target []string          `json:"targets,omitempty"`
-  Label  map[string]string `json:"labels,omitempty"`
+	Target []string          `json:"targets,omitempty"`
+	Label  map[string]string `json:"labels,omitempty"`
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
 
-  client := cmon.NewClient(&config.CmonInstance{
-    Url:      cmonEndpoint,
-    Username: cmonUsername,
-    Password: cmonPassword,
-  },
-  30)
+	client := cmon.NewClient(&config.CmonInstance{
+		Url:      cmonEndpoint,
+		Username: cmonUsername,
+		Password: cmonPassword,
+	},
+		30)
 
-  err := client.Authenticate()
-  if err != nil {
-    res, err := client.Ping()
-    log.Println("Test: ", err, res)
-    return
-  }
+	err := client.Authenticate()
+	if err != nil {
+		res, err := client.Ping()
+		log.Println("Test: ", err, res)
+		return
+	}
 
-  res, err := client.GetAllClusterInfo(&api.GetAllClusterInfoRequest{
-    WithHosts: true,
-  })
+	res, err := client.GetAllClusterInfo(&api.GetAllClusterInfoRequest{
+		WithHosts: true,
+	})
 
-  if err != nil {
-    log.Println("Test: ", err, res)
-  }
+	if err != nil {
+		log.Println("Test: ", err, res)
+	}
 
-  clusterTarget := []ClusterTarget{}
+	clusterTarget := []ClusterTarget{}
 
-  // iterate through all clusters
-  for i, cluster := range res.Clusters {
+	// iterate through all clusters
+	for i, cluster := range res.Clusters {
 
-    temp := ClusterTarget{
-      Target: []string{},
-      Label: map[string]string{
-        "ClusterID":   strconv.FormatInt(int64(cluster.ClusterID), 10),
-        "ClusterName": cluster.ClusterName,
-        "cid":         strconv.FormatInt(int64(cluster.ClusterID), 10),
-        "ClusterType": cluster.ClusterType,
-      },
-    }
+		temp := ClusterTarget{
+			Target: []string{},
+			Label: map[string]string{
+				"ClusterID":   strconv.FormatInt(int64(cluster.ClusterID), 10),
+				"ClusterName": cluster.ClusterName,
+				"cid":         strconv.FormatInt(int64(cluster.ClusterID), 10),
+				"ClusterType": cluster.ClusterType,
+			},
+		}
 
-    // iterate through all hosts for given cluster
-    for _, host := range cluster.Hosts {
+		// iterate through all hosts for given cluster
+		for _, host := range cluster.Hosts {
 
-      if host.Nodetype == "controller" {
-        continue
-      }
+			if host.Nodetype == "controller" {
+				continue
+			}
 
-      if host.Nodetype == "prometheus" {
-        continue
-      }
+			if host.Nodetype == "prometheus" {
+				continue
+			}
 
-      //check host type and assign exporter port
-      temp.Target = append(temp.Target, host.IP+":9100") // node exporter
-      temp.Target = append(temp.Target, host.IP+":9011") // process exporter
+			if host.Nodetype == "keepalived" {
+				continue
+			}
 
-      if host.Nodetype == "mysql" {
-        temp.Target = append(temp.Target, host.IP+":9104") // mysql exporter
-      }
+			//check host type and assign exporter port
+			// node_exporter and process_exporter applies to any node type
+			temp.Target = append(temp.Target, host.IP+":9100") // node exporter
+			temp.Target = append(temp.Target, host.IP+":9011") // process exporter
 
-    }
+			if host.Nodetype == "mysql" {
+				temp.Target = append(temp.Target, host.IP+":9104") // mysql exporter
+			}
 
-    clusterTarget = append(clusterTarget, temp)
-    i++
-  }
+			if host.Nodetype == "haproxy" {
+				temp.Target = append(temp.Target, host.IP+":9600") // haproxy exporter
+			}
 
-  w.Header().Set("Content-Type", "application/json")
-  w.WriteHeader(http.StatusCreated)
-  json.NewEncoder(w).Encode(clusterTarget)
+			if host.Nodetype == "mongo" {
+				if host.Role == "mongo" {
+					temp.Target = append(temp.Target, host.IP+":9216") // mongo exporter
+				}
+				if host.Role == "mongos" {
+					temp.Target = append(temp.Target, host.IP+":9215") // mongos exporter
+				}
+
+				if host.Role == "mongocfg" {
+					temp.Target = append(temp.Target, host.IP+":9214") // mongocfg exporter
+				}
+			}
+
+			if host.Nodetype == "mssql" {
+				temp.Target = append(temp.Target, host.IP+":9399") // mssql exporter
+			}
+
+			if host.Nodetype == "postgres" {
+				temp.Target = append(temp.Target, host.IP+":9187") // postgres exporter
+			}
+
+			if host.Nodetype == "redis" {
+				temp.Target = append(temp.Target, host.IP+":9121") // redis exporter
+			}
+
+			if host.Nodetype == "proxysql" {
+				temp.Target = append(temp.Target, host.IP+":42004") // proxysql exporter
+			}
+
+			if host.Nodetype == "pgbouncer" {
+				temp.Target = append(temp.Target, host.IP+":9127") // pgbouncer exporter
+			}
+		}
+
+		clusterTarget = append(clusterTarget, temp)
+		i++
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(clusterTarget)
 
 }
 
 func main() {
-  cmonEndpoint = os.Getenv("CMON_ENDPOINT")
-  cmonUsername = os.Getenv("CMON_USERNAME")
-  cmonPassword = os.Getenv("CMON_PASSWORD")
+	cmonEndpoint = os.Getenv("CMON_ENDPOINT")
+	cmonUsername = os.Getenv("CMON_USERNAME")
+	cmonPassword = os.Getenv("CMON_PASSWORD")
 
-  if cmonEndpoint == "" {
-    cmonEndpoint = "https://127.0.0.1:9501"
-  }
+	if cmonEndpoint == "" {
+		cmonEndpoint = "https://127.0.0.1:9501"
+	}
 
-  if cmonUsername == "" {
-    log.Fatalf("Env variable CMON_USERNAME is not set.")
-  }
+	if cmonUsername == "" {
+		log.Fatalf("Env variable CMON_USERNAME is not set.")
+	}
 
-  if cmonPassword == "" {
-    log.Fatalf("Env variable CMON_PASSWORD is not set.")
-  }
+	if cmonPassword == "" {
+		log.Fatalf("Env variable CMON_PASSWORD is not set.")
+	}
 
-  http.HandleFunc("/", IndexHandler)
-  log.Fatal(http.ListenAndServe(":8080", nil))
+	http.HandleFunc("/", IndexHandler)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
