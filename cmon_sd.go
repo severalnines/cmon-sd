@@ -95,7 +95,8 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 			temp.Target = append(temp.Target, host.IP+":9100") // node exporter
 			temp.Target = append(temp.Target, host.IP+":9011") // process exporter
 
-			if host.Nodetype == "mysql" {
+			if host.Nodetype == "mysql" || host.Nodetype == "galera" {
+
 				temp.Target = append(temp.Target, host.IP+":9104") // mysql exporter
 			}
 
