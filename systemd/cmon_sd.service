@@ -1,0 +1,22 @@
+[Unit]
+Description=CMON Service Discovery
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/var/run
+Environment="CMON_USERNAME=johan"
+Environment="CMON_PASSWORD=johan"
+ExecStart=/usr/local/bin/cmon_sd
+Restart=on-failure
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=cmon_sd
+PIDFile=/var/run/cmon_sd.pid
+
+[Install]
+WantedBy=multi-user.target
+
