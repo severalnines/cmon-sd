@@ -20,6 +20,8 @@ import (
 	"os"
 	"strconv"
 
+	"flag"
+	"fmt"
 	"github.com/severalnines/cmon-proxy/cmon"
 	"github.com/severalnines/cmon-proxy/cmon/api"
 	"github.com/severalnines/cmon-proxy/config"
@@ -149,6 +151,13 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+var port int
+
+func init() {
+	flag.IntVar(&port, "p", 8080, "Listen port.")
+	flag.Parse()
+}
+
 func main() {
 	cmonEndpoint = os.Getenv("CMON_ENDPOINT")
 	cmonUsername = os.Getenv("CMON_USERNAME")
@@ -167,5 +176,6 @@ func main() {
 	}
 
 	http.HandleFunc("/", IndexHandler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	listenAddress := fmt.Sprintf(":%d", port)
+	log.Fatal(http.ListenAndServe(listenAddress, nil))
 }
