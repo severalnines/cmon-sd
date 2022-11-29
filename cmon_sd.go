@@ -70,10 +70,11 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 		temp := ClusterTarget{
 			Target: []string{},
 			Label: map[string]string{
-				"ClusterID":   strconv.FormatInt(int64(cluster.ClusterID), 10),
-				"ClusterName": cluster.ClusterName,
-				"cid":         strconv.FormatInt(int64(cluster.ClusterID), 10),
-				"ClusterType": cluster.ClusterType,
+				"ClusterID":    strconv.FormatInt(int64(cluster.ClusterID), 10),
+				"ClusterName":  cluster.ClusterName,
+				"cid":          strconv.FormatInt(int64(cluster.ClusterID), 10),
+				"ClusterType":  cluster.ClusterType,
+				"ControllerId": client.ControllerID(),
 			},
 		}
 
