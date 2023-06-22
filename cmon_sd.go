@@ -141,7 +141,7 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 		}
-
+		temp.Target = removeDuplicateStr(temp.Target)
 		clusterTarget = append(clusterTarget, temp)
 		i++
 	}
@@ -149,7 +149,18 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(clusterTarget)
+}
 
+func removeDuplicateStr(strSlice []string) []string {
+	allKeys := make(map[string]bool)
+	list := []string{}
+	for _, item := range strSlice {
+		if _, value := allKeys[item]; !value {
+			allKeys[item] = true
+			list = append(list, item)
+		}
+	}
+	return list
 }
 
 var port int
