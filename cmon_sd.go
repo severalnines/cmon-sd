@@ -108,7 +108,7 @@ func IndexHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if host.Nodetype == "mongo" {
-				if host.Role == "mongo" {
+				if host.Role == "shardsvr" {
 					temp.Target = append(temp.Target, host.IP+":9216") // mongo exporter
 				}
 				if host.Role == "mongos" {
