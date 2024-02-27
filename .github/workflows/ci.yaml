@@ -3,9 +3,10 @@ on:
   push:
 
 env:
-  PROJECT_ID: ${{ secrets.G_PROJECT_ID }}
-  REGISTRY: eu.gcr.io
+  PROJECT_ID: severalnines-public
+  REGISTRY: europe-docker.pkg.dev
   IMAGE: ${{ github.event.repository.name }}
+  REPO: ccx
 
 jobs:
   build-publish:
@@ -23,17 +24,17 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v0
         with:
-          project_id: ${{ env.PROJECT_ID }}
+          project_id: ${{ secrets.G_PROJECT_ID }}
 
       - name: Configure docker
         run: |-
-          gcloud --quiet auth configure-docker
+          gcloud --quiet auth configure-docker "$REGISTRY"
 
       - name: Build docker image
         run: |-
           docker build \
-            --tag "$REGISTRY/$PROJECT_ID/$IMAGE:build-$GITHUB_RUN_NUMBER" \
-            --tag "$REGISTRY/$PROJECT_ID/$IMAGE:latest" \
+            --tag "$REGISTRY/$PROJECT_ID/$REPO/$IMAGE:build-$GITHUB_RUN_NUMBER" \
+            --tag "$REGISTRY/$PROJECT_ID/$REPO/$IMAGE:latest" \
             --build-arg GITHUB_SHA="$GITHUB_SHA" \
             --build-arg GITHUB_REF="$GITHUB_REF" \
             --build-arg GITHUB_RUN_NUMBER="$GITHUB_RUN_NUMBER" \
@@ -43,4 +44,4 @@ jobs:
       # Push the Docker image to Google Container Registry
       - name: Publish docker image
         run: |-
-          docker push "$REGISTRY/$PROJECT_ID/$IMAGE:latest"
+          docker push "$REGISTRY/$PROJECT_ID/$REPO/$IMAGE:latest"
