@@ -1,10 +1,10 @@
 name: Build and publish app
 on:
+  workflow_dispatch:
   push:
 
 env:
-  PROJECT_ID: ${{ secrets.G_PROJECT_ID }}
-  REGISTRY: eu.gcr.io
+  REGISTRY: severalnines
   IMAGE: ${{ github.event.repository.name }}
 
 jobs:
@@ -17,30 +17,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - uses: google-github-actions/auth@v0
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
         with:
-          credentials_json: ${{ secrets.SA_KEY }}
-
-      - uses: google-github-actions/setup-gcloud@v0
-        with:
-          project_id: ${{ env.PROJECT_ID }}
-
-      - name: Configure docker
-        run: |-
-          gcloud --quiet auth configure-docker
+          username: ${{ env.REGISTRY }}
+          password: ${{ secrets.DH_PASS }}
 
       - name: Build docker image
         run: |-
           docker build \
-            --tag "$REGISTRY/$PROJECT_ID/$IMAGE:build-$GITHUB_RUN_NUMBER" \
-            --tag "$REGISTRY/$PROJECT_ID/$IMAGE:latest" \
-            --build-arg GITHUB_SHA="$GITHUB_SHA" \
-            --build-arg GITHUB_REF="$GITHUB_REF" \
-            --build-arg GITHUB_RUN_NUMBER="$GITHUB_RUN_NUMBER" \
+            --tag "$REGISTRY/$IMAGE:build-$GITHUB_RUN_NUMBER" \
+            --tag "$REGISTRY/$IMAGE:latest" \
             -f Dockerfile \
             .
 
-      # Push the Docker image to Google Container Registry
       - name: Publish docker image
         run: |-
-          docker push "$REGISTRY/$PROJECT_ID/$IMAGE:latest"
+          docker push "$REGISTRY/$IMAGE:build-$GITHUB_RUN_NUMBER"
+          docker push "$REGISTRY/$IMAGE:latest"
+        if: github.ref_name == 'main'
