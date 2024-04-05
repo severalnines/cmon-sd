@@ -1,11 +1,13 @@
 name: Build and publish app
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
   workflow_dispatch:
 
 env:
+
   PROJECT_ID: severalnines-public
   REGISTRY: europe-docker.pkg.dev
   IMAGE: ${{ github.event.repository.name }}
@@ -21,7 +23,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - uses: google-github-actions/auth@v0
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
         with:
           credentials_json: ${{ secrets.SA_KEY }}
 
@@ -38,13 +41,11 @@ jobs:
           docker build \
             --tag "$REGISTRY/$PROJECT_ID/$REPO/$IMAGE:build-$GITHUB_RUN_NUMBER" \
             --tag "$REGISTRY/$PROJECT_ID/$REPO/$IMAGE:latest" \
-            --build-arg GITHUB_SHA="$GITHUB_SHA" \
-            --build-arg GITHUB_REF="$GITHUB_REF" \
-            --build-arg GITHUB_RUN_NUMBER="$GITHUB_RUN_NUMBER" \
             -f Dockerfile \
             .
 
-      # Push the Docker image to Google Container Registry
       - name: Publish docker image
         run: |-
           docker push "$REGISTRY/$PROJECT_ID/$REPO/$IMAGE:latest"
+          docker push "$REGISTRY/$PROJECT_ID/$REPO/$IMAGE:build-$GITHUB_RUN_NUMBER"
+
