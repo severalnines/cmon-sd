@@ -4,7 +4,6 @@ on:
   push:
 
 env:
-
   PROJECT_ID: severalnines-public
   REGISTRY: europe-docker.pkg.dev
   IMAGE: ${{ github.event.repository.name }}
@@ -44,4 +43,4 @@ jobs:
         run: |-
           docker push "$REGISTRY/$PROJECT_ID/$REPO/$IMAGE:latest"
           docker push "$REGISTRY/$PROJECT_ID/$REPO/$IMAGE:build-$GITHUB_RUN_NUMBER"
-
+        if: github.ref_name == 'main'
