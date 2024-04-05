@@ -6,7 +6,7 @@ env:
   PROJECT_ID: severalnines-public
   REGISTRY: europe-docker.pkg.dev
   IMAGE: ${{ github.event.repository.name }}
-  REPO: ccx
+  REPO: cc
 
 jobs:
   build-publish:
@@ -24,7 +24,7 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v0
         with:
-          project_id: ${{ secrets.G_PROJECT_ID }}
+          project_id: ${{ env.PROJECT_ID }}
 
       - name: Configure docker
         run: |-
