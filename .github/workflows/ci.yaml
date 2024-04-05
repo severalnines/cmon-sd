@@ -1,6 +1,7 @@
 name: Build and publish app
 on:
   push:
+  workflow_dispatch:
 
 env:
   PROJECT_ID: severalnines-public
