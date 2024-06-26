@@ -78,6 +78,11 @@ func NewService() (*Service, error) {
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
+	err := cmonClient.Authenticate()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Service{
 		cmonClient: cmonClient,
 		log:        logger,
@@ -190,7 +195,7 @@ func main() {
 
 	service, err := NewService()
 	if err != nil {
-		log.Fatalf("Error creating handler: %v", err)
+		log.Fatalf("Error creating the service: %v", err)
 	}
 
 	mux := service.Handler()
