@@ -162,6 +162,8 @@ func (s *Service) IndexHandler(w http.ResponseWriter, r *http.Request) {
 				temp.Target = append(temp.Target, host.IP+":9187")
 			case "redis":
 				temp.Target = append(temp.Target, host.IP+":9121")
+			case "valkey":
+				temp.Target = append(temp.Target, host.IP+":9121")				
 			case "proxysql":
 				temp.Target = append(temp.Target, host.IP+":42004")
 			case "pgbouncer":
