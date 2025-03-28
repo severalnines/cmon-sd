@@ -100,7 +100,7 @@ func (s *Service) errorResponse(w http.ResponseWriter, statusCode int, message s
 func (s *Service) IndexHandler(w http.ResponseWriter, r *http.Request) {
 	err := s.cmonClient.Authenticate()
 	if err != nil {
-		s.log.Error("Error authenticating", err)
+		s.log.Error("Error authenticating", "error",  err)
 		s.errorResponse(w, http.StatusUnauthorized, fmt.Sprintf("Error authenticating: %s", err.Error()))
 		return
 	}
