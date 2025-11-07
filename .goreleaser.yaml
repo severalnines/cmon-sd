@@ -1,0 +1,29 @@
+version: 2
+project_name: cmon_sd
+
+builds:
+  - id: cmon_sd
+    main: ./cmon_sd.go
+    binary: cmon_sd
+    goos: [ linux ]
+    goarch: [ amd64 ]
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+
+archives:
+  - id: cmon_sd_archive
+    ids: [ cmon_sd ]
+    formats: [ tar.gz ]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  draft: false
+  prerelease: auto
