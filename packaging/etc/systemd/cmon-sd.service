@@ -1,0 +1,20 @@
+# Copyright 2024 Severalnines AB
+# cmon-sd service
+
+[Unit]
+Description=CMON Service Discovery
+After=syslog.target
+After=network.target
+After=network-online.target
+
+[Service]
+ExecStart=/usr/share/cmon-sd/cmon_sd
+PIDFile=/var/run/cmon-sd.pid
+User=root
+Group=root
+
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
