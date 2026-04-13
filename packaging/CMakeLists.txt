@@ -38,14 +38,6 @@ install (FILES
     GROUP_EXECUTE GROUP_READ WORLD_READ WORLD_EXECUTE
 )
 
-# Init.d script
-install (FILES
-    ${CMAKE_SOURCE_DIR}/etc/init.d/cmon-sd
-    DESTINATION /etc/init.d
-    PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-    GROUP_EXECUTE GROUP_READ WORLD_READ WORLD_EXECUTE
-)
-
 # Systemd service file
 install (FILES
     ${CMAKE_SOURCE_DIR}/etc/systemd/cmon-sd.service
@@ -92,7 +84,6 @@ else (APPLE)
     set (CPACK_RPM_USER_FILELIST
         "%ignore /etc"
         "%ignore /etc/"
-        "%ignore /etc/init.d"
         "%ignore /etc/systemd"
         "%ignore /etc/systemd/"
         "%ignore /etc/systemd/system"
