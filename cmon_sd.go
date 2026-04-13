@@ -195,6 +195,12 @@ func main() {
 	flag.IntVar(&port, "p", 8080, "Listen port.")
 	flag.Parse()
 
+	if portStr := os.Getenv("CMON_SD_PORT"); portStr != "" {
+		if p, err := strconv.Atoi(portStr); err == nil {
+			port = p
+		}
+	}
+
 	service, err := NewService()
 	if err != nil {
 		log.Fatalf("Error creating the service: %v", err)

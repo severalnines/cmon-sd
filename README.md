@@ -3,7 +3,9 @@ Prometheus service discovery for CMON
 
 Usage:
 
-CMON_USERNAME=cmon CMON_PASSWORD=secret ./cmon_sd 
+```
+CMON_USERNAME=cmon CMON_PASSWORD=secret ./cmon_sd
+```
 
 Verify it works:
 
@@ -14,6 +16,15 @@ curl 127.0.0.1:8080
 
 ## Options
 `-p <int>    -- listening port, defaults to 8080`
+
+## Environment variables
+
+| Variable        | Required | Default                    | Description                        |
+|-----------------|----------|----------------------------|------------------------------------|
+| `CMON_USERNAME` | yes      | —                          | ClusterControl username            |
+| `CMON_PASSWORD` | yes      | —                          | ClusterControl password            |
+| `CMON_ENDPOINT` | no       | `https://127.0.0.1:9501`  | ClusterControl API endpoint        |
+| `CMON_SD_PORT`  | no       | `8080`                     | Listening port (overrides `-p`)    |
 
 # Sample prometheus.yml
 ```
