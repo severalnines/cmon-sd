@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# Create symlink to binary
+test -e /usr/sbin/cmon-sd || ln -sf /usr/share/cmon-sd/cmon_sd /usr/sbin/cmon-sd

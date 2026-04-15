@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# Remove symlink
+rm -f /usr/sbin/cmon-sd
