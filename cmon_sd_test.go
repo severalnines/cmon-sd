@@ -32,12 +32,17 @@ func (c CmonClientMock) GetAllClusterInfo(req *api.GetAllClusterInfoRequest) (*a
 		return nil, errors.New("cmon client error")
 	}
 
+	if !req.WithHosts || !req.WithTags {
+		return nil, errors.New("expected with_hosts and with_tags")
+	}
+
 	return &api.GetAllClusterInfoResponse{
 		Clusters: []*api.Cluster{
 			{
 				ClusterID:   1,
 				ClusterName: "cluster1",
 				ClusterType: "postgresql_single",
+				Tags:        []string{"tenant=acme", "production"},
 				Hosts: []*api.Host{
 					{
 						Nodetype: "mysql",
@@ -168,10 +173,98 @@ func TestHandlerIndexHandlerSuccess(t *testing.T) {
 			"ClusterType":  "postgresql_single",
 			"ControllerId": "00000000-0000-0000-0000-000000000000",
 			"cid":          "1",
+			"tenant":       "acme",
+			"tags":         ",production,tenant:acme,",
 		},
 	})
 
 	if !reflect.DeepEqual(clusterTarget, expectedClusterTarget) {
 		t.Errorf("GET failed: expected cluster target %v, got %v", expectedClusterTarget, clusterTarget)
+	}
+}
+
+func TestAddTagLabels(t *testing.T) {
+	tests := []struct {
+		name     string
+		labels   map[string]string
+		tags     []string
+		expected map[string]string
+	}{
+		{
+			name:     "no tags",
+			labels:   map[string]string{"ClusterID": "1"},
+			tags:     nil,
+			expected: map[string]string{"ClusterID": "1"},
+		},
+		{
+			name:   "key value and plain tags",
+			labels: map[string]string{"ClusterID": "1"},
+			tags:   []string{"tenant:acme", "env : prod", "production", "production"},
+			expected: map[string]string{
+				"ClusterID": "1",
+				"tenant":    "acme",
+				"env":       "prod",
+				"tags":      ",env:prod,production,tenant:acme,",
+			},
+		},
+		{
+			name:   "equals sign is normalized to colon",
+			labels: map[string]string{},
+			tags:   []string{"tenant=acme", "env = prod"},
+			expected: map[string]string{
+				"tenant": "acme",
+				"env":    "prod",
+				"tags":   ",env:prod,tenant:acme,",
+			},
+		},
+		{
+			name:   "same tag with both separators is deduplicated",
+			labels: map[string]string{},
+			tags:   []string{"tenant=acme", "tenant:acme"},
+			expected: map[string]string{
+				"tenant": "acme",
+				"tags":   ",tenant:acme,",
+			},
+		},
+		{
+			name:   "split on first separator",
+			labels: map[string]string{},
+			tags:   []string{"url:http://example.com", "query=a=b", "team:a=b"},
+			expected: map[string]string{
+				"url":   "http://example.com",
+				"query": "a=b",
+				"team":  "a=b",
+				"tags":  ",query:a=b,team:a=b,url:http://example.com,",
+			},
+		},
+		{
+			name:   "invalid label names are sanitized",
+			labels: map[string]string{},
+			tags:   []string{"cost-center:42", "1st=yes", "a.b:c"},
+			expected: map[string]string{
+				"cost_center": "42",
+				"_1st":        "yes",
+				"a_b":         "c",
+				"tags":        ",1st:yes,a.b:c,cost-center:42,",
+			},
+		},
+		{
+			name:   "existing and reserved labels are not overwritten",
+			labels: map[string]string{"ClusterID": "1"},
+			tags:   []string{"ClusterID:2", "__address__=evil", "tags:x", ":empty"},
+			expected: map[string]string{
+				"ClusterID": "1",
+				"tags":      ",:empty,ClusterID:2,__address__:evil,tags:x,",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			addTagLabels(tt.labels, tt.tags)
+			if !reflect.DeepEqual(tt.labels, tt.expected) {
+				t.Errorf("expected %v, got %v", tt.expected, tt.labels)
+			}
+		})
 	}
 }

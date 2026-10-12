@@ -26,6 +26,32 @@ curl 127.0.0.1:8080
 | `CMON_ENDPOINT` | no       | `https://127.0.0.1:9501`  | ClusterControl API endpoint        |
 | `CMON_SD_PORT`  | no       | `8080`                     | Listening port (overrides `-p`)    |
 
+## Cluster tags as labels
+
+Cluster tags from ClusterControl are exposed as target labels:
+
+- A tag of the form `key:value` or `key=value` becomes the label
+  `key="value"`, e.g. the tag `tenant:acme` or `tenant=acme` becomes
+  `tenant="acme"`. The tag is split on the first `:` or `=`, so the value may
+  contain either character (`url:http://host` becomes `url="http://host"`).
+  Characters not valid in a Prometheus label name are replaced with `_`
+  (`cost-center:42` becomes `cost_center="42"`).
+- All tags are also exposed in a combined `tags` label, sorted and wrapped in
+  commas (`,production,tenant:acme,`), so any tag can be matched with a regex
+  in relabeling (e.g. `.*,production,.*`). Key/value tags are normalized to
+  `key:value` there, so `tenant=acme` is listed as `tenant:acme`.
+- Tags never override the built-in labels (`ClusterID`, `cid`, `ClusterName`,
+  `ClusterType`, `ControllerId`, `tags`), and keys starting with `__` are ignored.
+
+Set the tags when creating the cluster (or later in ClusterControl), and they
+will show up on all metrics scraped through `http_sd_configs`.
+
+Example output for a cluster tagged `tenant:acme` and `production`:
+
+```
+[{"targets":["10.10.10.17:9011","10.10.10.17:9100","10.10.10.17:9104"],"labels":{"ClusterID":"641","ClusterName":"PXC57","ClusterType":"GALERA","ControllerId":"...","cid":"641","tags":",production,tenant:acme,","tenant":"acme"}}]
+```
+
 # Sample prometheus.yml
 ```
 ---

@@ -23,6 +23,7 @@ import (
 	"slices"
 	"sort"
 	"strconv"
+	"strings"
 
 	"flag"
 	"fmt"
@@ -107,6 +108,7 @@ func (s *Service) IndexHandler(w http.ResponseWriter, r *http.Request) {
 
 	res, err := s.cmonClient.GetAllClusterInfo(&api.GetAllClusterInfoRequest{
 		WithHosts: true,
+		WithTags:  true,
 	})
 
 	if err != nil {
@@ -129,6 +131,7 @@ func (s *Service) IndexHandler(w http.ResponseWriter, r *http.Request) {
 				"ControllerId": s.cmonClient.ControllerID(),
 			},
 		}
+		addTagLabels(temp.Label, cluster.Tags)
 
 		// iterate through all hosts for given cluster
 		for _, host := range cluster.Hosts {
@@ -180,6 +183,89 @@ func (s *Service) IndexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(clusterTarget)
+}
+
+// tagsLabel holds all cluster tags joined as ",tag1,tag2," (sorted) so that
+// any tag can be matched in Prometheus relabeling with a regex like ".*,foo,.*".
+const tagsLabel = "tags"
+
+// addTagLabels adds cluster tags to labels. A tag of the form "key:value" or
+// "key=value" becomes the label key="value". The tag is split on the first
+// ":" or "=", so the value may contain either character (e.g.
+// "url:http://host"). In the combined tags label, key/value tags are
+// normalized to "key:value". The key is sanitized to a valid Prometheus label
+// name. Existing labels are never overwritten, and keys starting with "__"
+// are skipped since they are reserved by Prometheus.
+func addTagLabels(labels map[string]string, tags []string) {
+	if len(tags) == 0 {
+		return
+	}
+
+	type keyValue struct{ key, value string }
+	normalized := make([]string, 0, len(tags))
+	pairs := map[string]keyValue{}
+
+	for _, tag := range tags {
+		sep := strings.IndexAny(tag, ":=")
+		if sep < 0 {
+			normalized = append(normalized, tag)
+			continue
+		}
+
+		key, value := strings.TrimSpace(tag[:sep]), strings.TrimSpace(tag[sep+1:])
+		tag = key + ":" + value
+		normalized = append(normalized, tag)
+		pairs[tag] = keyValue{key, value}
+	}
+
+	sort.Strings(normalized)
+	normalized = slices.Compact(normalized)
+
+	if _, exists := labels[tagsLabel]; !exists {
+		labels[tagsLabel] = "," + strings.Join(normalized, ",") + ","
+	}
+
+	for _, tag := range normalized {
+		kv, ok := pairs[tag]
+		if !ok {
+			continue
+		}
+
+		key := sanitizeLabelName(kv.key)
+		if key == "" || strings.HasPrefix(key, "__") {
+			continue
+		}
+
+		if _, exists := labels[key]; exists {
+			continue
+		}
+
+		labels[key] = kv.value
+	}
+}
+
+// sanitizeLabelName replaces characters not allowed in a Prometheus label
+// name ([a-zA-Z_][a-zA-Z0-9_]*) with underscores, and prefixes names that
+// start with a digit with an underscore.
+func sanitizeLabelName(name string) string {
+	if name == "" {
+		return ""
+	}
+
+	b := []byte(name)
+	for i, c := range b {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', c == '_':
+		default:
+			b[i] = '_'
+		}
+	}
+
+	if b[0] >= '0' && b[0] <= '9' {
+		return "_" + string(b)
+	}
+
+	return string(b)
 }
 
 func (s *Service) Handler() http.Handler {
