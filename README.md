@@ -36,9 +36,8 @@ Cluster tags from ClusterControl are exposed as target labels:
   contain either character (`url:http://host` becomes `url="http://host"`).
   Characters not valid in a Prometheus label name are replaced with `_`
   (`cost-center:42` becomes `cost_center="42"`).
-- All tags are also exposed in a combined `tags` label, sorted and wrapped in
-  commas (`,production,tenant:acme,`), so any tag can be matched with a regex
-  in relabeling (e.g. `.*,production,.*`). Key/value tags are normalized to
+- All tags are also exposed in a combined `tags` label, sorted and
+  comma-separated (`production,tenant:acme`). Key/value tags are normalized to
   `key:value` there, so `tenant=acme` is listed as `tenant:acme`.
 - Tags never override the built-in labels (`ClusterID`, `cid`, `ClusterName`,
   `ClusterType`, `ControllerId`, `tags`), and keys starting with `__` are ignored.
@@ -49,7 +48,7 @@ will show up on all metrics scraped through `http_sd_configs`.
 Example output for a cluster tagged `tenant:acme` and `production`:
 
 ```
-[{"targets":["10.10.10.17:9011","10.10.10.17:9100","10.10.10.17:9104"],"labels":{"ClusterID":"641","ClusterName":"PXC57","ClusterType":"GALERA","ControllerId":"...","cid":"641","tags":",production,tenant:acme,","tenant":"acme"}}]
+[{"targets":["10.10.10.17:9011","10.10.10.17:9100","10.10.10.17:9104"],"labels":{"ClusterID":"641","ClusterName":"PXC57","ClusterType":"GALERA","ControllerId":"...","cid":"641","tags":"production,tenant:acme","tenant":"acme"}}]
 ```
 
 # Sample prometheus.yml

@@ -185,8 +185,7 @@ func (s *Service) IndexHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(clusterTarget)
 }
 
-// tagsLabel holds all cluster tags joined as ",tag1,tag2," (sorted) so that
-// any tag can be matched in Prometheus relabeling with a regex like ".*,foo,.*".
+// tagsLabel holds all cluster tags joined as "tag1,tag2" (sorted).
 const tagsLabel = "tags"
 
 // addTagLabels adds cluster tags to labels. A tag of the form "key:value" or
@@ -222,7 +221,7 @@ func addTagLabels(labels map[string]string, tags []string) {
 	normalized = slices.Compact(normalized)
 
 	if _, exists := labels[tagsLabel]; !exists {
-		labels[tagsLabel] = "," + strings.Join(normalized, ",") + ","
+		labels[tagsLabel] = strings.Join(normalized, ",")
 	}
 
 	for _, tag := range normalized {

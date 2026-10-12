@@ -174,7 +174,7 @@ func TestHandlerIndexHandlerSuccess(t *testing.T) {
 			"ControllerId": "00000000-0000-0000-0000-000000000000",
 			"cid":          "1",
 			"tenant":       "acme",
-			"tags":         ",production,tenant:acme,",
+			"tags":         "production,tenant:acme",
 		},
 	})
 
@@ -204,7 +204,7 @@ func TestAddTagLabels(t *testing.T) {
 				"ClusterID": "1",
 				"tenant":    "acme",
 				"env":       "prod",
-				"tags":      ",env:prod,production,tenant:acme,",
+				"tags":      "env:prod,production,tenant:acme",
 			},
 		},
 		{
@@ -214,7 +214,7 @@ func TestAddTagLabels(t *testing.T) {
 			expected: map[string]string{
 				"tenant": "acme",
 				"env":    "prod",
-				"tags":   ",env:prod,tenant:acme,",
+				"tags":   "env:prod,tenant:acme",
 			},
 		},
 		{
@@ -223,7 +223,7 @@ func TestAddTagLabels(t *testing.T) {
 			tags:   []string{"tenant=acme", "tenant:acme"},
 			expected: map[string]string{
 				"tenant": "acme",
-				"tags":   ",tenant:acme,",
+				"tags":   "tenant:acme",
 			},
 		},
 		{
@@ -234,7 +234,7 @@ func TestAddTagLabels(t *testing.T) {
 				"url":   "http://example.com",
 				"query": "a=b",
 				"team":  "a=b",
-				"tags":  ",query:a=b,team:a=b,url:http://example.com,",
+				"tags":  "query:a=b,team:a=b,url:http://example.com",
 			},
 		},
 		{
@@ -245,7 +245,7 @@ func TestAddTagLabels(t *testing.T) {
 				"cost_center": "42",
 				"_1st":        "yes",
 				"a_b":         "c",
-				"tags":        ",1st:yes,a.b:c,cost-center:42,",
+				"tags":        "1st:yes,a.b:c,cost-center:42",
 			},
 		},
 		{
@@ -254,7 +254,7 @@ func TestAddTagLabels(t *testing.T) {
 			tags:   []string{"ClusterID:2", "__address__=evil", "tags:x", ":empty"},
 			expected: map[string]string{
 				"ClusterID": "1",
-				"tags":      ",:empty,ClusterID:2,__address__:evil,tags:x,",
+				"tags":      ":empty,ClusterID:2,__address__:evil,tags:x",
 			},
 		},
 	}
