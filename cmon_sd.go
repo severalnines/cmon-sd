@@ -185,52 +185,24 @@ func (s *Service) IndexHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(clusterTarget)
 }
 
-// tagsLabel holds all cluster tags joined as "tag1,tag2" (sorted).
-const tagsLabel = "tags"
-
 // addTagLabels adds cluster tags to labels. A tag of the form "key:value" or
 // "key=value" becomes the label key="value". The tag is split on the first
 // ":" or "=", so the value may contain either character (e.g.
-// "url:http://host"). In the combined tags label, key/value tags are
-// normalized to "key:value". The key is sanitized to a valid Prometheus label
-// name. Existing labels are never overwritten, and keys starting with "__"
-// are skipped since they are reserved by Prometheus.
+// "url:http://host"). Tags without a separator are ignored. The key is
+// sanitized to a valid Prometheus label name. Existing labels are never
+// overwritten, and keys starting with "__" are skipped since they are
+// reserved by Prometheus.
 func addTagLabels(labels map[string]string, tags []string) {
-	if len(tags) == 0 {
-		return
-	}
+	sorted := slices.Clone(tags)
+	sort.Strings(sorted)
 
-	type keyValue struct{ key, value string }
-	normalized := make([]string, 0, len(tags))
-	pairs := map[string]keyValue{}
-
-	for _, tag := range tags {
+	for _, tag := range sorted {
 		sep := strings.IndexAny(tag, ":=")
 		if sep < 0 {
-			normalized = append(normalized, tag)
 			continue
 		}
 
-		key, value := strings.TrimSpace(tag[:sep]), strings.TrimSpace(tag[sep+1:])
-		tag = key + ":" + value
-		normalized = append(normalized, tag)
-		pairs[tag] = keyValue{key, value}
-	}
-
-	sort.Strings(normalized)
-	normalized = slices.Compact(normalized)
-
-	if _, exists := labels[tagsLabel]; !exists {
-		labels[tagsLabel] = strings.Join(normalized, ",")
-	}
-
-	for _, tag := range normalized {
-		kv, ok := pairs[tag]
-		if !ok {
-			continue
-		}
-
-		key := sanitizeLabelName(kv.key)
+		key := sanitizeLabelName(strings.TrimSpace(tag[:sep]))
 		if key == "" || strings.HasPrefix(key, "__") {
 			continue
 		}
@@ -239,7 +211,7 @@ func addTagLabels(labels map[string]string, tags []string) {
 			continue
 		}
 
-		labels[key] = kv.value
+		labels[key] = strings.TrimSpace(tag[sep+1:])
 	}
 }
 

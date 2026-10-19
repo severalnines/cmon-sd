@@ -174,7 +174,6 @@ func TestHandlerIndexHandlerSuccess(t *testing.T) {
 			"ControllerId": "00000000-0000-0000-0000-000000000000",
 			"cid":          "1",
 			"tenant":       "acme",
-			"tags":         "production,tenant:acme",
 		},
 	})
 
@@ -197,33 +196,22 @@ func TestAddTagLabels(t *testing.T) {
 			expected: map[string]string{"ClusterID": "1"},
 		},
 		{
-			name:   "key value and plain tags",
+			name:   "key value tags, plain tags ignored",
 			labels: map[string]string{"ClusterID": "1"},
-			tags:   []string{"tenant:acme", "env : prod", "production", "production"},
+			tags:   []string{"tenant:acme", "region : us-east", "production"},
 			expected: map[string]string{
 				"ClusterID": "1",
 				"tenant":    "acme",
-				"env":       "prod",
-				"tags":      "env:prod,production,tenant:acme",
+				"region":    "us-east",
 			},
 		},
 		{
-			name:   "equals sign is normalized to colon",
+			name:   "equals sign separator",
 			labels: map[string]string{},
-			tags:   []string{"tenant=acme", "env = prod"},
+			tags:   []string{"tenant=acme", "region = us-west"},
 			expected: map[string]string{
 				"tenant": "acme",
-				"env":    "prod",
-				"tags":   "env:prod,tenant:acme",
-			},
-		},
-		{
-			name:   "same tag with both separators is deduplicated",
-			labels: map[string]string{},
-			tags:   []string{"tenant=acme", "tenant:acme"},
-			expected: map[string]string{
-				"tenant": "acme",
-				"tags":   "tenant:acme",
+				"region": "us-west",
 			},
 		},
 		{
@@ -234,7 +222,6 @@ func TestAddTagLabels(t *testing.T) {
 				"url":   "http://example.com",
 				"query": "a=b",
 				"team":  "a=b",
-				"tags":  "query:a=b,team:a=b,url:http://example.com",
 			},
 		},
 		{
@@ -245,16 +232,14 @@ func TestAddTagLabels(t *testing.T) {
 				"cost_center": "42",
 				"_1st":        "yes",
 				"a_b":         "c",
-				"tags":        "1st:yes,a.b:c,cost-center:42",
 			},
 		},
 		{
 			name:   "existing and reserved labels are not overwritten",
 			labels: map[string]string{"ClusterID": "1"},
-			tags:   []string{"ClusterID:2", "__address__=evil", "tags:x", ":empty"},
+			tags:   []string{"ClusterID:2", "__address__=evil", ":empty"},
 			expected: map[string]string{
 				"ClusterID": "1",
-				"tags":      ":empty,ClusterID:2,__address__:evil,tags:x",
 			},
 		},
 	}
