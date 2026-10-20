@@ -23,6 +23,7 @@ import (
 	"slices"
 	"sort"
 	"strconv"
+	"strings"
 
 	"flag"
 	"fmt"
@@ -129,6 +130,7 @@ func (s *Service) IndexHandler(w http.ResponseWriter, r *http.Request) {
 				"ControllerId": s.cmonClient.ControllerID(),
 			},
 		}
+		addTagLabels(temp.Label, cluster.Tags)
 
 		// iterate through all hosts for given cluster
 		for _, host := range cluster.Hosts {
@@ -180,6 +182,62 @@ func (s *Service) IndexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(clusterTarget)
+}
+
+// addTagLabels adds cluster tags to labels. A tag of the form "key:value" or
+// "key=value" becomes the label key="value". The tag is split on the first
+// ":" or "=", so the value may contain either character (e.g.
+// "url:http://host"). Tags without a separator are ignored. The key is
+// sanitized to a valid Prometheus label name. Existing labels are never
+// overwritten. Keys starting with "__" are skipped since they are reserved by
+// Prometheus, and so are "job" and "instance": Prometheus only sets those when
+// the target doesn't, so a cluster-wide value would give every host in the
+// cluster the same instance and make their series collide.
+func addTagLabels(labels map[string]string, tags []string) {
+	sorted := slices.Clone(tags)
+	sort.Strings(sorted)
+
+	for _, tag := range sorted {
+		sep := strings.IndexAny(tag, ":=")
+		if sep < 0 {
+			continue
+		}
+
+		key := sanitizeLabelName(strings.TrimSpace(tag[:sep]))
+		if key == "" || strings.HasPrefix(key, "__") || key == "job" || key == "instance" {
+			continue
+		}
+
+		if _, exists := labels[key]; exists {
+			continue
+		}
+
+		labels[key] = strings.TrimSpace(tag[sep+1:])
+	}
+}
+
+// sanitizeLabelName replaces characters not allowed in a Prometheus label
+// name ([a-zA-Z_][a-zA-Z0-9_]*) with underscores, and prefixes names that
+// start with a digit with an underscore.
+func sanitizeLabelName(name string) string {
+	if name == "" {
+		return ""
+	}
+
+	b := []byte(name)
+	for i, c := range b {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9', c == '_':
+		default:
+			b[i] = '_'
+		}
+	}
+
+	if b[0] >= '0' && b[0] <= '9' {
+		return "_" + string(b)
+	}
+
+	return string(b)
 }
 
 func (s *Service) Handler() http.Handler {

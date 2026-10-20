@@ -26,6 +26,36 @@ curl 127.0.0.1:8080
 | `CMON_ENDPOINT` | no       | `https://127.0.0.1:9501`  | ClusterControl API endpoint        |
 | `CMON_SD_PORT`  | no       | `8080`                     | Listening port (overrides `-p`)    |
 
+## Cluster tags as labels
+
+Cluster tags from ClusterControl are exposed as target labels:
+
+- A tag of the form `key:value` becomes the label `key="value"`, e.g. the tag
+  `tenant:acme` becomes `tenant="acme"`. The tag is split on the first `:`, so
+  the value may contain `:` (`url:http://host` becomes `url="http://host"`).
+  Characters not valid in a Prometheus label name are replaced with `_`
+  (`cost-center:42` becomes `cost_center="42"`).
+- Tags without `:` (e.g. `production`) are ignored.
+- Tags never override the built-in labels (`ClusterID`, `cid`, `ClusterName`,
+  `ClusterType`, `ControllerId`). Keys starting with `__` and the keys `job`
+  and `instance` are ignored, since Prometheus sets those per target.
+
+Set the tags when creating the cluster (or later in ClusterControl), and they
+will show up on all metrics scraped through `http_sd_configs`. Note that cmon
+rejects tags containing `=` or spaces at cluster creation, so always use
+`key:value`.
+
+**Upgrading:** clusters that already have `key:value` tags will get the
+matching labels as soon as the new cmon_sd is running, with no change needed in
+ClusterControl. Check that these new labels don't clash with your existing
+relabeling rules or dashboards.
+
+Example output for a cluster tagged `tenant:acme` and `region:us-east`:
+
+```
+[{"targets":["10.10.10.17:9011","10.10.10.17:9100","10.10.10.17:9104"],"labels":{"ClusterID":"641","ClusterName":"PXC57","ClusterType":"GALERA","ControllerId":"...","cid":"641","region":"us-east","tenant":"acme"}}]
+```
+
 # Sample prometheus.yml
 ```
 ---
