@@ -32,8 +32,8 @@ func (c CmonClientMock) GetAllClusterInfo(req *api.GetAllClusterInfoRequest) (*a
 		return nil, errors.New("cmon client error")
 	}
 
-	if !req.WithHosts || !req.WithTags {
-		return nil, errors.New("expected with_hosts and with_tags")
+	if !req.WithHosts {
+		return nil, errors.New("expected with_hosts")
 	}
 
 	return &api.GetAllClusterInfoResponse{
@@ -42,7 +42,7 @@ func (c CmonClientMock) GetAllClusterInfo(req *api.GetAllClusterInfoRequest) (*a
 				ClusterID:   1,
 				ClusterName: "cluster1",
 				ClusterType: "postgresql_single",
-				Tags:        []string{"tenant=acme", "production"},
+				Tags:        []string{"tenant:acme", "production"},
 				Hosts: []*api.Host{
 					{
 						Nodetype: "mysql",
@@ -240,6 +240,22 @@ func TestAddTagLabels(t *testing.T) {
 			tags:   []string{"ClusterID:2", "__address__=evil", ":empty"},
 			expected: map[string]string{
 				"ClusterID": "1",
+			},
+		},
+		{
+			name:   "instance tag is skipped",
+			labels: map[string]string{},
+			tags:   []string{"instance:db1", "tenant:acme"},
+			expected: map[string]string{
+				"tenant": "acme",
+			},
+		},
+		{
+			name:   "job tag is skipped",
+			labels: map[string]string{},
+			tags:   []string{"job:mysql", "region:us-east"},
+			expected: map[string]string{
+				"region": "us-east",
 			},
 		},
 	}

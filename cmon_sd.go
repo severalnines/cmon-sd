@@ -108,7 +108,6 @@ func (s *Service) IndexHandler(w http.ResponseWriter, r *http.Request) {
 
 	res, err := s.cmonClient.GetAllClusterInfo(&api.GetAllClusterInfoRequest{
 		WithHosts: true,
-		WithTags:  true,
 	})
 
 	if err != nil {
@@ -190,8 +189,10 @@ func (s *Service) IndexHandler(w http.ResponseWriter, r *http.Request) {
 // ":" or "=", so the value may contain either character (e.g.
 // "url:http://host"). Tags without a separator are ignored. The key is
 // sanitized to a valid Prometheus label name. Existing labels are never
-// overwritten, and keys starting with "__" are skipped since they are
-// reserved by Prometheus.
+// overwritten. Keys starting with "__" are skipped since they are reserved by
+// Prometheus, and so are "job" and "instance": Prometheus only sets those when
+// the target doesn't, so a cluster-wide value would give every host in the
+// cluster the same instance and make their series collide.
 func addTagLabels(labels map[string]string, tags []string) {
 	sorted := slices.Clone(tags)
 	sort.Strings(sorted)
@@ -203,7 +204,7 @@ func addTagLabels(labels map[string]string, tags []string) {
 		}
 
 		key := sanitizeLabelName(strings.TrimSpace(tag[:sep]))
-		if key == "" || strings.HasPrefix(key, "__") {
+		if key == "" || strings.HasPrefix(key, "__") || key == "job" || key == "instance" {
 			continue
 		}
 
